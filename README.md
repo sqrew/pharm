@@ -6,14 +6,14 @@ A CLI-first medication management and reminder tool for the terminal.
 
 ## Features
 
-- 📋 **Track all medications** - pills, liquids, injections, inhalers, patches
-- ⏰ **Smart reminders** - background daemon with desktop notifications
-- 🔄 **Flexible scheduling** - daily, weekly, custom intervals (e.g., "every 3 days")
-- 📅 **Interval tracking** - prevents accidental overdose by respecting medication frequency
-- ⏱️ **Flexible time parsing** - use "8:00", "morning", "evening", or "bedtime"
-- 📝 **Notes support** - add reminders like "take with food"
-- 🔒 **Local storage** - your health data stays on your machine (`~/.pharm.json`)
-- ✅ **Simple workflow** - add, list, take, edit medications with ease
+- **Track all medications** - pills, liquids, injections, inhalers, patches
+- **Smart reminders** - background daemon with desktop notifications
+- **Flexible scheduling** - daily, weekly, custom intervals (e.g., "every 3 days")
+- **Interval tracking** - prevents accidental overdose by respecting medication frequency
+- **Flexible time parsing** - use "8:00", "morning", "evening", or "bedtime"
+- **Notes support** - add reminders like "take with food"
+- **Local storage** - your health data stays on your machine (`~/.pharm.json`)
+- **Simple workflow** - add, list, take, edit medications with ease
 
 ## Installation
 
@@ -153,42 +153,6 @@ tail -f ~/pharm.log
 - Resets daily medications at midnight
 - Desktop notifications persist until dismissed
 
-### Auto-start on Login (systemd)
-
-Create `~/.config/systemd/user/pharm.service`:
-
-```ini
-[Unit]
-Description=Pharm medication reminder daemon
-After=graphical-session.target
-
-[Service]
-Type=simple
-ExecStart=%h/.cargo/bin/pharm daemon
-Restart=on-failure
-StandardOutput=append:%h/pharm.log
-StandardError=append:%h/pharm.log
-
-[Install]
-WantedBy=default.target
-```
-
-Enable and start:
-
-```bash
-systemctl --user enable pharm
-systemctl --user start pharm
-systemctl --user status pharm
-```
-
-View logs:
-
-```bash
-journalctl --user -u pharm -f
-```
-
-## How It Works
-
 ### Interval Safety
 
 **pharm** tracks the last time each medication was taken and respects the specified frequency to prevent accidental overdose:
@@ -260,7 +224,6 @@ Contributions are welcome! This is a simple, focused tool that does one thing we
 
 - Keep the code simple and readable
 - Add tests for new functionality
-- Follow existing code style
 - Update documentation
 
 ## License
@@ -270,6 +233,8 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 Built with:
+- [rust](https://rust-lang.org/) - Programming Language
+Using the following crates:
 - [clap](https://github.com/clap-rs/clap) - Command line argument parsing
 - [serde](https://serde.rs/) - Serialization framework
 - [chrono](https://github.com/chronotope/chrono) - Date and time library
@@ -277,4 +242,4 @@ Built with:
 
 ---
 
-**pharm** - Your terminal pharmacist 💊
+**pharm** - Your terminal pharmacist helper 💊
