@@ -2,10 +2,10 @@
 name = "pharm"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Your Name <nicholaspmanson@gmail.com>"]
 description = "CLI-first medication management and reminder tool"
 license = "MIT"
-repository = "https://github.com/yourusername/pharm"
+repository = "https://github.com/sqrew/pharm"
 readme = "README.md"
 keywords = ["medication", "health", "reminder", "cli", "notifications"]
 categories = ["command-line-utilities"]
