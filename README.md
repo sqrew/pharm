@@ -330,7 +330,7 @@ pharm r "Old Med"      # Remove
 ## Building from Source
 
 ```bash
-git clone https://github.com/yourusername/pharm
+git clone https://github.com/sqrew/pharm
 cd pharm
 cargo build --release
 ./target/release/pharm --version
