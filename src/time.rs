@@ -10,13 +10,15 @@ pub fn parse_time(time_str: &str) -> Option<(u32, u32)> {
     // First, try to parse named times (case-insensitive)
     let time_lower = trimmed.to_lowercase();
     let named_time = match time_lower.as_str() {
-        "morning" | "breakfast" => Some((8, 0)),
-        "midmorning" | "mid-morning" => Some((10, 0)),
-        "noon" | "midday" | "lunch" => Some((12, 0)),
+        "morn" | "morning" | "breakfast" => Some((8, 0)),
+        "midmorning" | "mid-morning" | "midmorn" | "mid-morn" | "brunch" => Some((10, 0)),
+        "noon" | "midday" | "lunch" | "day" => Some((12, 0)),
         "afternoon" => Some((15, 0)),
-        "evening" | "dinner" => Some((18, 0)),
-        "night" | "bedtime" => Some((21, 0)),
+        "evening" | "dinner" | "supper" => Some((18, 0)),
+        "night" | "nighttime" | "bedtime" | "bed" | "sleep" => Some((21, 0)),
         "midnight" => Some((0, 0)),
+        // PRN (as-needed) - special marker, use (0, 0) but will be handled specially
+        "prn" | "as needed" | "as-needed" | "asneeded" | "when needed" => Some((0, 0)),
         _ => None,
     };
 
@@ -143,5 +145,59 @@ mod tests {
         // Boundary values
         assert_eq!(parse_time("0:0"), Some((0, 0)));
         assert_eq!(parse_time("23:59"), Some((23, 59)));
+    }
+
+    #[test]
+    fn test_parse_time_prn() {
+        // PRN (as-needed) time markers
+        assert_eq!(parse_time("prn"), Some((0, 0)));
+        assert_eq!(parse_time("PRN"), Some((0, 0)));
+        assert_eq!(parse_time("PrN"), Some((0, 0)));
+        assert_eq!(parse_time("as needed"), Some((0, 0)));
+        assert_eq!(parse_time("as-needed"), Some((0, 0)));
+        assert_eq!(parse_time("AS NEEDED"), Some((0, 0)));
+        assert_eq!(parse_time("when needed"), Some((0, 0)));
+        assert_eq!(parse_time("  prn  "), Some((0, 0))); // with whitespace
+    }
+
+    #[test]
+    fn test_parse_time_whitespace() {
+        // Extra whitespace handling
+        assert_eq!(parse_time("  8:00  "), Some((8, 0)));
+        assert_eq!(parse_time("  morning  "), Some((8, 0)));
+        assert_eq!(parse_time("\t14:30\t"), Some((14, 30)));
+        assert_eq!(parse_time(" 8 "), Some((8, 0)));
+    }
+
+    #[test]
+    fn test_parse_time_named_variations() {
+        // All named time aliases
+        assert_eq!(parse_time("morn"), Some((8, 0)));
+        assert_eq!(parse_time("breakfast"), Some((8, 0)));
+        assert_eq!(parse_time("brunch"), Some((10, 0)));
+        assert_eq!(parse_time("midday"), Some((12, 0)));
+        assert_eq!(parse_time("lunch"), Some((12, 0)));
+        assert_eq!(parse_time("dinner"), Some((18, 0)));
+        assert_eq!(parse_time("supper"), Some((18, 0)));
+        assert_eq!(parse_time("bed"), Some((21, 0)));
+        assert_eq!(parse_time("sleep"), Some((21, 0)));
+        assert_eq!(parse_time("nighttime"), Some((21, 0)));
+    }
+
+    #[test]
+    fn test_is_time_due_invalid_input() {
+        // Invalid time strings should return false (not due)
+        assert_eq!(is_time_due("garbage"), false);
+        assert_eq!(is_time_due("25:00"), false);
+        assert_eq!(is_time_due(""), false);
+        assert_eq!(is_time_due("invalid"), false);
+    }
+
+    #[test]
+    fn test_is_time_due_midnight() {
+        // Midnight (00:00) should always be "due" since any time >= 00:00
+        // Note: This test is time-dependent but midnight is special
+        assert_eq!(is_time_due("0:00"), true);
+        assert_eq!(is_time_due("midnight"), true);
     }
 }

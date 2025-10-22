@@ -2,8 +2,8 @@ use clap::{Parser, Subcommand};
 
 use daemon::run_daemon;
 use database::{
-    add_medication, edit_medication, list_medications, remove_medication, take_all_medications,
-    take_medication, untake_medication,
+    add_medication, display_history, edit_medication, list_medications, remove_medication,
+    take_all_medications, take_medication, untake_medication,
 };
 
 pub mod daemon;
@@ -15,7 +15,7 @@ pub mod time;
 #[command(name = "pharm")]
 #[command(
     about = "CLI-first medication management tool",
-    long_about = "A simple CLI tool to help remind you to take your medication. No data privacy is implemented."
+    long_about = "A simple CLI tool to help remind you to take your medication and maintain medication compliance. No data privacy is implemented. Everything is saved as JSON for easy import/export."
 )]
 #[command(version)]
 struct Cli {
@@ -25,6 +25,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(visible_aliases = ["a", "ad"])]
     /// Add a new medication
     Add {
         /// Name of the medication
@@ -43,19 +44,22 @@ enum Commands {
         notes: Option<String>,
     },
     /// Remove a medication
+    #[command(visible_alias = "r")]
     Remove {
         /// Name of the medication
         name: String,
     },
-    Take {
-        name: String,
-    },
+    /// Mark a medication as taken
+    #[command(visible_alias = "t")]
+    Take { name: String },
+    #[command(visible_alias = "u")]
     /// Mark a medication as NOT taken (undo)
-    Untake {
-        name: String,
-    },
+    Untake { name: String },
+    /// Mark ALL medications as taken
+    #[command(visible_alias = "ta")]
     TakeAll,
     /// Edit an existing medication
+    #[command(visible_alias = "e")]
     Edit {
         /// Name of the medication to edit
         name: String,
@@ -73,8 +77,29 @@ enum Commands {
         notes: Option<String>,
     },
     /// List all medications
-    List,
+    #[command(visible_aliases = ["l", "s", "show"])]
+    List {
+        /// Show archived medications instead of active ones
+        #[arg(short, long)]
+        archived: bool,
+        /// Show only medications that are due now (past scheduled time and interval)
+        #[arg(long)]
+        due: bool,
+    },
+    /// View medication history
+    #[command(visible_alias = "h")]
+    History {
+        /// Name of medication (optional - shows all if not specified)
+        name: Option<String>,
+        /// Number of days to show (default: 30)
+        #[arg(short, long)]
+        days: Option<u32>,
+        /// Show only archived medications
+        #[arg(short, long)]
+        archived: bool,
+    },
     /// Start the background daemon for reminders
+    #[command(visible_alias = "d")]
     Daemon,
 }
 
@@ -110,8 +135,15 @@ fn main() {
         } => {
             edit_medication(name, dose, time, freq, notes);
         }
-        Commands::List => {
-            list_medications();
+        Commands::List { archived, due } => {
+            list_medications(archived, due);
+        }
+        Commands::History {
+            name,
+            days,
+            archived,
+        } => {
+            display_history(name, days, archived);
         }
         Commands::Daemon => {
             run_daemon();

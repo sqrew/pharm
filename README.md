@@ -10,9 +10,13 @@ A CLI-first medication management and reminder tool for the terminal.
 - **Smart reminders** - background daemon with desktop notifications
 - **Flexible scheduling** - daily, weekly, custom intervals (e.g., "every 3 days")
 - **Interval tracking** - prevents accidental overdose by respecting medication frequency
+- **Medication history** - track all doses taken with timestamps and adherence metrics
+- **Archive system** - removed medications preserve complete history for medical records
 - **Flexible time parsing** - use "8:00", "morning", "evening", or "bedtime"
 - **Notes support** - add reminders like "take with food"
+- **Command aliases** - faster typing with short commands (e.g., `pharm t` for take)
 - **Local storage** - your health data stays on your machine (`~/.pharm.json`)
+- **Privacy-focused** - file permissions set to 0600 (Unix) for medical data protection
 - **Simple workflow** - add, list, take, edit medications with ease
 
 ## Installation
@@ -40,14 +44,20 @@ pharm --version
 ## Quick Start
 
 ```bash
-# Add a medication
+# Add a scheduled medication
 pharm add "Aspirin" --dose 500mg --time 8:00 --freq daily
 
 # Add with notes
 pharm add "Insulin" --dose 10u --time morning --freq daily --notes "Take with breakfast"
 
+# Add as-needed medication
+pharm add "Ibuprofen" --dose 200mg --time prn --freq prn --notes "For headaches"
+
 # List all medications
 pharm list
+
+# List only medications due right now
+pharm list --due
 
 # Mark a dose as taken
 pharm take "Aspirin"
@@ -79,6 +89,10 @@ pharm add "Allergy Med" -d 10mg -t evening -f "every 3 days"
 
 # With notes
 pharm add "Metformin" -d 500mg -t dinner -f "twice daily" -n "Take with food"
+
+# PRN (as-needed) medications
+pharm add "Tylenol" -d 500mg -t prn -f prn -n "For pain"
+pharm add "Benadryl" -d 25mg -t prn -f "as needed" -n "For allergies"
 ```
 
 **Supported time formats:**
@@ -91,14 +105,22 @@ pharm add "Metformin" -d 500mg -t dinner -f "twice daily" -n "Take with food"
 - `every X days` (e.g., `every 3 days`)
 - `every X weeks` (e.g., `every 2 weeks`)
 - `twice daily`, `3 times daily` (treated as daily)
+- `prn`, `as needed` (as-needed medications with no schedule)
 
 ### Listing Medications
 
 ```bash
+# List all active medications
 pharm list
+
+# List archived medications
+pharm list --archived
+
+# List only medications due right now
+pharm list --due
 ```
 
-Shows all medications with their dose, time, interval, taken status, and notes.
+The `--due` flag shows only untaken medications that are currently due (past their scheduled time and interval). Perfect for answering "What do I need to take right now?"
 
 ### Taking Medications
 
@@ -130,6 +152,11 @@ pharm edit "Aspirin" --notes ""
 ```bash
 pharm remove "Aspirin"
 ```
+
+When you remove a medication, it's **archived** with its complete history preserved. This means:
+- All dose records are kept for medical compliance tracking
+- You can view the history anytime with `pharm history <name>`
+- To restart taking it, just use `pharm add` again - it will unarchive automatically
 
 ### Running the Daemon
 
@@ -163,6 +190,77 @@ tail -f ~/pharm.log
 
 This means if you take a weekly medication on Monday, you won't get reminders again until the following Monday, even if the daemon restarts.
 
+### PRN (As-Needed) Medications
+
+For medications taken only when needed (e.g., pain relievers, allergy meds):
+
+```bash
+# Add PRN medication
+pharm add "Ibuprofen" --dose 200mg --time prn --freq prn --notes "For headaches"
+
+# Take it whenever needed
+pharm take "Ibuprofen"
+
+# View history
+pharm history "Ibuprofen"
+```
+
+**PRN medications:**
+- Have no scheduled reminders (daemon skips them)
+- Can be taken anytime without interval restrictions
+- Still track complete history with timestamps
+- Show "as-needed" instead of adherence percentage in history
+- Won't appear in `pharm list --due` (no schedule)
+
+**Supported PRN markers:** `prn`, `as needed`, `as-needed`, `when needed`
+
+### Viewing History
+
+Track your medication adherence over time:
+
+```bash
+# View all medication history (last 30 days by default)
+pharm history
+
+# View history for specific medication
+pharm history "Aspirin"
+
+# View last 7 days
+pharm history --days 7
+
+# View longer period
+pharm history "Aspirin" --days 90
+
+# View only archived medications
+pharm history --archived
+```
+
+History includes:
+- Complete timestamp for every dose taken
+- Dose amount at time of taking (in case it changed)
+- Adherence percentage based on expected vs actual doses
+- Works for both active and archived medications
+
+### Archived Medications
+
+View or manage archived medications:
+
+```bash
+# List archived medications
+pharm list --archived
+
+# View archived medication history
+pharm history "Old Med" --archived
+
+# Restart an archived medication (unarchive)
+pharm add "Old Med" --dose 10mg --time morning --freq daily
+```
+
+When you unarchive a medication by adding it again:
+- All historical dose records are preserved
+- Fields (dose, time, frequency) are updated to new values
+- Medication moves back to active list
+
 ### Data Storage
 
 All medication data is stored in `~/.pharm.json` as human-readable JSON. You can:
@@ -170,7 +268,12 @@ All medication data is stored in `~/.pharm.json` as human-readable JSON. You can
 - View it: `cat ~/.pharm.json`
 - Edit it manually (if needed): `nano ~/.pharm.json`
 
-The file is created with your default umask permissions.
+The file contains:
+- `medications`: Active medications you're currently taking
+- `archived_medications`: Removed medications with complete history preserved
+- Each medication includes full dose history with timestamps
+
+File permissions are automatically set to **0600** (owner read/write only) on Unix systems for medical data privacy.
 
 ### Notification System
 
@@ -190,18 +293,39 @@ Uses your desktop environment's native notification system:
 
 ## Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `pharm add` | Add a new medication |
-| `pharm list` | List all medications |
-| `pharm take <name>` | Mark medication as taken |
-| `pharm untake <name>` | Undo marking as taken |
-| `pharm take-all` | Mark all medications as taken |
-| `pharm edit <name>` | Edit medication details |
-| `pharm remove <name>` | Remove a medication |
-| `pharm daemon` | Start reminder daemon |
-| `pharm --help` | Show help |
-| `pharm --version` | Show version |
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `pharm add` | `a`, `ad` | Add a new medication (or unarchive if exists) |
+| `pharm list` | `l` | List active medications |
+| `pharm list --archived` | `l -a` | List archived medications |
+| `pharm list --due` | `l --due` | List only medications due right now |
+| `pharm take <name>` | `t` | Mark medication as taken |
+| `pharm untake <name>` | `u` | Undo marking as taken |
+| `pharm take-all` | `ta` | Mark all medications as taken |
+| `pharm edit <name>` | `e` | Edit medication details |
+| `pharm remove <name>` | `r` | Remove (archive) a medication |
+| `pharm history` | `h` | View medication history |
+| `pharm history <name>` | `h <name>` | View specific medication history |
+| `pharm history --days 7` | `h -d 7` | View last 7 days of history |
+| `pharm daemon` | `d` | Start reminder daemon |
+| `pharm --help` | | Show help |
+| `pharm --version` | | Show version |
+
+### Command Aliases
+
+All commands support short aliases for faster typing:
+
+```bash
+# These are equivalent:
+pharm add "Aspirin" -d 500mg -t morning -f daily
+pharm a "Aspirin" -d 500mg -t morning -f daily
+
+# More examples:
+pharm t "Aspirin"      # Take
+pharm l                # List
+pharm h --days 7       # History
+pharm r "Old Med"      # Remove
+```
 
 ## Building from Source
 

@@ -1,5 +1,5 @@
 use chrono::{Datelike, Local, NaiveDate};
-use notify_rust::Notification;
+use notify_rust::{Notification, Urgency};
 use std::collections::HashSet;
 use std::thread;
 use std::time::Duration;
@@ -9,7 +9,17 @@ use crate::interval::parse_interval_to_days;
 use crate::time::is_time_due;
 
 /// Check if enough time has passed since last dose based on medication interval
-fn is_medication_due_by_interval(last_dose_date: &str, interval_str: &str, today: &NaiveDate) -> bool {
+fn is_medication_due_by_interval(
+    last_dose_date: &str,
+    interval_str: &str,
+    today: &NaiveDate,
+) -> bool {
+    // Parse interval to days - None means PRN (as-needed)
+    let interval_days = match parse_interval_to_days(interval_str) {
+        Some(days) => days,
+        None => return true, // PRN medications can always be taken (no interval restriction)
+    };
+
     // If never taken, it's due
     if last_dose_date.is_empty() {
         return true;
@@ -21,9 +31,6 @@ fn is_medication_due_by_interval(last_dose_date: &str, interval_str: &str, today
         Err(_) => return true, // If we can't parse, assume it's due (safer)
     };
 
-    // Parse interval to days
-    let interval_days = parse_interval_to_days(interval_str).unwrap_or(1);
-
     // Calculate days since last dose
     let days_since_dose = (*today - last_dose).num_days();
 
@@ -34,6 +41,15 @@ fn is_medication_due_by_interval(last_dose_date: &str, interval_str: &str, today
 pub fn run_daemon() {
     println!("Daemon started. Checking for medication reminders...");
     println!("Press Ctrl+C to stop.");
+    println!(
+        "Don't forget to add this process to your system's autostart/startup to always have reminders active!"
+    );
+    println!("Enter HELP, help, -h or --help at any time for more information about a command.");
+
+    // CRITICAL: Reset medications on startup in case daemon wasn't running at midnight
+    // This ensures medications due today are reset even if daemon was off overnight
+    println!("Checking for medications that need to be reset...");
+    reset_all_medications();
 
     // Track which medications we've already notified about today
     let mut notified_today: HashSet<String> = HashSet::new();
@@ -47,7 +63,7 @@ pub fn run_daemon() {
             notified_today.clear();
             current_day = now.day();
             println!(
-                "[{}] New day detected - resetting all medications to untaken",
+                "[{}] NEW DAY DETECTED - RESETTING ALL MEDICATIONS TO UNTAKEN AND RESETTING TIMERS",
                 now.format("%H:%M:%S")
             );
             reset_all_medications();
@@ -57,6 +73,11 @@ pub fn run_daemon() {
         let today_date = now.date_naive();
 
         for med in meds.iter() {
+            // Skip PRN (as-needed) medications - they have no schedule
+            if parse_interval_to_days(&med.medication_frequency).is_none() {
+                continue;
+            }
+
             // Clear notification flag if medication was taken
             if med.taken && notified_today.contains(&med.name) {
                 notified_today.remove(&med.name);
@@ -67,7 +88,7 @@ pub fn run_daemon() {
             let interval_allows = is_medication_due_by_interval(
                 &med.last_dose_date,
                 &med.medication_frequency,
-                &today_date
+                &today_date,
             );
 
             // Only notify for untaken medications that are:
@@ -76,13 +97,15 @@ pub fn run_daemon() {
             // 3. Haven't been notified yet today
             if !med.taken && time_is_due && interval_allows && !notified_today.contains(&med.name) {
                 let result = Notification::new()
-                    .summary("Medication Reminder")
+                    .summary("MEDICATION REMINDER")
                     .body(&format!(
                         "Time to take: {} ({})\nScheduled for: {}",
                         med.name, med.dose, med.time_of_day
                     ))
-                    .icon("medication")
+                    .icon("MEDICATION")
                     .timeout(0) // Don't auto-dismiss
+                    .appname("pharm")
+                    .urgency(Urgency::Critical)
                     .show();
 
                 if result.is_ok() {
