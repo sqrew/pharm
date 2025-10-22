@@ -175,9 +175,9 @@ tail -f ~/pharm.log
 
 **Daemon features:**
 - Checks every 60 seconds for due medications
-- Only notifies once per medication per day
+- Only notifies once per medication per daemon session (resets on daemon restart or midnight)
 - Respects medication intervals (won't remind for weekly meds every day)
-- Resets daily medications at midnight
+- Resets medications at midnight and on daemon startup (ensures correct state even if daemon was off overnight)
 - Desktop notifications persist until dismissed
 
 ### Interval Safety
