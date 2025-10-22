@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DoseRecord {
-    pub timestamp: String,  // Full datetime: "2025-10-21 08:30:15"
-    pub dose: String,       // Dose at time of taking (in case it changes)
+    pub timestamp: String, // Full datetime: "2025-10-21 08:30:15"
+    pub dose: String,      // Dose at time of taking (in case it changes)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -235,11 +235,15 @@ pub fn add_medication(
     let name_lower = name.to_lowercase();
 
     // Check if medication already exists in active list
-    if db.medications
+    if db
+        .medications
         .iter()
         .any(|m| m.name.to_lowercase() == name_lower)
     {
-        eprintln!("Error: Medication '{}' already exists in active medications!", name);
+        eprintln!(
+            "Error: Medication '{}' already exists in active medications!",
+            name
+        );
         return;
     }
 
@@ -323,7 +327,10 @@ pub fn remove_medication(name: String) {
         println!("Archived medication: {}", name);
         if history_count > 0 {
             println!("  Preserved {} dose record(s) in archive", history_count);
-            println!("  View history anytime with: pharm history {} --archived", name);
+            println!(
+                "  View history anytime with: pharm history {} --archived",
+                name
+            );
         }
     } else {
         println!("Medication '{}' not found!", name);
@@ -476,7 +483,10 @@ pub fn take_medication(name: String) {
 
         if is_archived {
             eprintln!("Error: Medication '{}' is archived.", name);
-            eprintln!("To restart taking it, use: pharm add {} --dose <DOSE> --time <TIME> --freq <FREQ>", name);
+            eprintln!(
+                "To restart taking it, use: pharm add {} --dose <DOSE> --time <TIME> --freq <FREQ>",
+                name
+            );
         } else {
             eprintln!("Error: Medication '{}' not found!", name);
         }
@@ -519,7 +529,10 @@ pub fn untake_medication(name: String) {
 
         if is_archived {
             eprintln!("Error: Medication '{}' is archived.", name);
-            eprintln!("To restart taking it, use: pharm add {} --dose <DOSE> --time <TIME> --freq <FREQ>", name);
+            eprintln!(
+                "To restart taking it, use: pharm add {} --dose <DOSE> --time <TIME> --freq <FREQ>",
+                name
+            );
         } else {
             eprintln!("Error: Medication '{}' not found!", name);
         }
@@ -666,7 +679,8 @@ pub fn reset_all_medications() {
         }
 
         // Parse interval to determine if we should reset
-        let interval_days = match crate::interval::parse_interval_to_days(&med.medication_frequency) {
+        let interval_days = match crate::interval::parse_interval_to_days(&med.medication_frequency)
+        {
             Some(days) => days,
             None => continue, // Skip PRN (as-needed) medications - they don't reset on schedule
         };
@@ -675,7 +689,9 @@ pub fn reset_all_medications() {
         let should_reset = if med.last_dose_date.is_empty() {
             // No last dose date, reset to be safe
             true
-        } else if let Ok(last_dose) = chrono::NaiveDate::parse_from_str(&med.last_dose_date, "%Y-%m-%d") {
+        } else if let Ok(last_dose) =
+            chrono::NaiveDate::parse_from_str(&med.last_dose_date, "%Y-%m-%d")
+        {
             let days_since_dose = (today_date - last_dose).num_days();
             days_since_dose >= interval_days as i64
         } else {
@@ -770,7 +786,7 @@ pub fn display_history(medication_name: Option<String>, days: Option<u32>, archi
                         let record_datetime = chrono::Local
                             .from_local_datetime(&timestamp)
                             .single()
-                            .unwrap_or_else(|| chrono::Local::now());
+                            .unwrap_or_else(chrono::Local::now);
                         record_datetime >= cutoff
                     } else {
                         true // Include if we can't parse
@@ -820,7 +836,10 @@ pub fn display_history(medication_name: Option<String>, days: Option<u32>, archi
                     0.0
                 };
 
-                println!("\n  Total doses: {} (Expected: ~{})", actual_doses, expected_doses);
+                println!(
+                    "\n  Total doses: {} (Expected: ~{})",
+                    actual_doses, expected_doses
+                );
                 println!("  Adherence: {:.1}%", adherence);
             }
             None => {
