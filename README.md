@@ -24,7 +24,7 @@ A CLI-first medication management and reminder tool for the terminal.
 ### From source
 
 ```bash
-git clone https://github.com/yourusername/pharm
+git clone https://github.com/sqrew/pharm
 cd pharm
 cargo install --path .
 ```
