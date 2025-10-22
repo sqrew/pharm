@@ -39,20 +39,12 @@ pub struct MedicationDatabase {
 
 /// Returns the path to the medication database file.
 ///
-/// On Unix systems, uses `$HOME/.pharm.json`.
-/// On Windows, uses `$USERPROFILE/.pharm.json` (falls back to `$HOME`).
+/// Uses the `dirs` crate to reliably locate the home directory across platforms.
 /// Falls back to `./.pharm.json` if no home directory is found.
 pub fn get_data_file() -> PathBuf {
-    // Get home directory in a cross-platform way
-    let home = if cfg!(windows) {
-        std::env::var("USERPROFILE")
-            .or_else(|_| std::env::var("HOME"))
-            .unwrap_or_else(|_| ".".to_string())
-    } else {
-        std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
-    };
-
-    PathBuf::from(home).join(".pharm.json")
+    // Use dirs crate for cross-platform home directory detection
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+    home.join(".pharm.json")
 }
 
 /// Loads the medication database from disk.
