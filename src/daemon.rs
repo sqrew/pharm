@@ -1,5 +1,7 @@
 use chrono::{Datelike, Local, NaiveDate};
-use notify_rust::{Notification, Urgency};
+use notify_rust::Notification;
+#[cfg(not(target_os = "macos"))]
+use notify_rust::Urgency;
 use std::collections::HashSet;
 use std::thread;
 use std::time::Duration;
@@ -96,7 +98,8 @@ pub fn run_daemon() {
             // 2. Haven't been taken too recently (interval check)
             // 3. Haven't been notified yet today
             if !med.taken && time_is_due && interval_allows && !notified_today.contains(&med.name) {
-                let result = Notification::new()
+                let mut notification = Notification::new();
+                notification
                     .summary("MEDICATION REMINDER")
                     .body(&format!(
                         "Time to take: {} ({})\nScheduled for: {}",
@@ -104,9 +107,12 @@ pub fn run_daemon() {
                     ))
                     .icon("MEDICATION")
                     .timeout(0) // Don't auto-dismiss
-                    .appname("pharm")
-                    .urgency(Urgency::Critical)
-                    .show();
+                    .appname("pharm");
+                // macOS: `urgency()` requires the experimental "preview-macos-un"
+                // feature (not enabled here). Skip on macOS, keep on other platforms.
+                #[cfg(not(target_os = "macos"))]
+                notification.urgency(Urgency::Critical);
+                let result = notification.show();
 
                 if result.is_ok() {
                     notified_today.insert(med.name.clone());
